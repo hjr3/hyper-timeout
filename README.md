@@ -13,6 +13,8 @@ At the time this crate was created, hyper does not support timeouts. There is a 
 
 There is a `TimeoutConnector` that implements the `hyper::Connect` trait. This connector wraps around `HttpConnector` or `HttpsConnector` values and provides timeouts.
 
+**Note:** Because of the way `tokio_proto::ClientProto` works, a read or write timeout will return a _broken pipe_ error.
+
 ## Usage
 
 First, add this to your `Cargo.toml`:
@@ -27,6 +29,8 @@ Next, add this to your crate:
 ```rust
 extern crate hyper_timeout;
 ```
+
+See the [client example](./examples/client.rs) for a working example.
 
 ## License
 
