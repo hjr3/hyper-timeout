@@ -3,6 +3,9 @@ name = "hyper-timeout"
 version = "0.1.0"
 authors = ["Herman J. Radtke III <herman@hermanradtke.com>"]
 
+[badges]
+travis-ci = { repository = "https://github.com/hjr3/hyper-timeout", branch = "master" }
+
 [dependencies]
 futures = "0.1"
 hyper = "0.11"
