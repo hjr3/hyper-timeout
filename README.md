@@ -3,8 +3,7 @@
 
 # hyper-timeout
 
-A timeout aware connector to be used with hyper `Client`.
-
+A connect, read and write timeout aware connector to be used with hyper `Client`.
 
 ## Problem
 
@@ -14,15 +13,21 @@ At the time this crate was created, hyper does not support timeouts. There is a 
 
 There is a `TimeoutConnector` that implements the `hyper::Connect` trait. This connector wraps around `HttpConnector` or `HttpsConnector` values and provides timeouts.
 
-**Note:** Because of the way `tokio_proto::ClientProto` works, a read or write timeout will return a _broken pipe_ error.
+**Note:** In hyper 0.11, a read or write timeout will return a _broken pipe_ error because of the way `tokio_proto::ClientProto` works
 
 ## Usage
 
-First, add this to your `Cargo.toml`:
+Hyper version compatibility:
+
+* The `0.1` release supports hyper 0.11.
+* The `0.2` release supports hyper 0.12.
+* The `master` branch will track on going developer for hyper 0.13.
+
+First, (assuming you are using hyper 0.12) add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hyper-timeout = "0.1"
+hyper-timeout = "0.2"
 ```
 
 Next, add this to your crate:

@@ -1,8 +1,8 @@
 [package]
 name = "hyper-timeout"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Herman J. Radtke III <herman@hermanradtke.com>"]
-description = "A timeout aware connector to be used with the hyper Client."
+description = "A connect, read and write timeout aware connector to be used with hyper Client."
 license = "MIT/Apache-2.0"
 documentation = "https://github.com/hjr3/hyper-timeout"
 homepage = "https://github.com/hjr3/hyper-timeout"
@@ -13,12 +13,12 @@ travis-ci = { repository = "https://github.com/hjr3/hyper-timeout", branch = "ma
 
 [dependencies]
 futures = "0.1"
-hyper = "0.11"
-tokio-core = "0.1"
+hyper = "0.12"
+tokio = "0.1"
 tokio-io = "0.1"
+tokio-io-timeout = "0.3"
+tokio-reactor = "0.1"
 tokio-service = "0.1"
-tokio-io-timeout = "0.1"
 
 [dev-dependencies]
-native-tls = "0.1"
-hyper-tls = "0.1"
+hyper-tls = "0.3"

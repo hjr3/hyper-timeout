@@ -1,16 +1,16 @@
 extern crate futures;
-extern crate tokio_core;
 extern crate hyper;
 extern crate hyper_tls;
 extern crate hyper_timeout;
 
 use std::env;
+use std::io::{self, Write};
 use std::time::Duration;
 
 use futures::Future;
 use futures::stream::Stream;
 
-use hyper::Client;
+use hyper::{rt, Client};
 
 //use hyper::client::HttpConnector;
 use hyper_tls::HttpsConnector;
@@ -23,32 +23,39 @@ fn main() {
         Some(url) => url,
         None => {
             println!("Usage: client <url>");
+            println!("Example: client https://example.com");
             return;
         }
     };
 
     let url = url.parse::<hyper::Uri>().unwrap();
 
-    let mut core = tokio_core::reactor::Core::new().unwrap();
-    let handle = core.handle();
+    rt::run(rt::lazy(|| {
+        // This example uses `HttpsConnector`, but you can also use hyper `HttpConnector`
+        //let connector = HttpConnector::new(1);
+        let https = HttpsConnector::new(1).unwrap();
+        let mut connector = TimeoutConnector::new(https);
+        connector.set_connect_timeout(Some(Duration::from_secs(5)));
+        connector.set_read_timeout(Some(Duration::from_secs(5)));
+        connector.set_write_timeout(Some(Duration::from_secs(5)));
+        let client = Client::builder().build::<_, hyper::Body>(connector);
 
-    // This example uses `HttpsConnector`, but you can also use the default hyper `HttpConnector`
-    //let connector = HttpConnector::new(4, &handle);
-    let connector = HttpsConnector::new(4, &handle).unwrap();
-    let mut tm = TimeoutConnector::new(connector, &handle);
-    tm.set_connect_timeout(Some(Duration::from_secs(5)));
-    tm.set_read_timeout(Some(Duration::from_secs(5)));
-    tm.set_write_timeout(Some(Duration::from_secs(5)));
-    let client = Client::configure().connector(tm).build(&handle);
+        client.get(url).and_then(|res| {
+            println!("Response: {}", res.status());
 
-    let get = client.get(url).and_then(|res| {
-        println!("Response: {}", res.status());
-        println!("Headers: \n{}", res.headers());
-
-        res.body().concat2()
-    });
-
-    let got = core.run(get).unwrap();
-    let output = String::from_utf8_lossy(&got);
-    println!("{}", output);
+            res
+                .into_body()
+                // Body is a stream, so as each chunk arrives...
+                .for_each(|chunk| {
+                    io::stdout()
+                        .write_all(&chunk)
+                        .map_err(|e| {
+                            panic!("example expects stdout is open, error={}", e)
+                        })
+                })
+        })
+        .map_err(|err| {
+            println!("Error: {}", err);
+        })
+    }));
 }
