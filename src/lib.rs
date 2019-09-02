@@ -81,14 +81,13 @@ where
     type Future = Box<Future<Item = Self::Response, Error = Self::Error>>;
 
     fn call(&self, req: Self::Request) -> Self::Future {
-        let handle = self.handle.clone();
         let read_timeout = self.read_timeout.clone();
         let write_timeout = self.write_timeout.clone();
         let connecting = self.connector.call(req);
 
         if self.connect_timeout.is_none() {
             return Box::new(connecting.map(move |io| {
-                let mut tm = TimeoutStream::new(io, &handle);
+                let mut tm = TimeoutStream::new(io);
                 tm.set_read_timeout(read_timeout);
                 tm.set_write_timeout(write_timeout);
                 tm
@@ -100,7 +99,7 @@ where
 
         Box::new(connecting.select2(timeout).then(move |res| match res {
             Ok(Either::A((io, _))) => {
-                let mut tm = TimeoutStream::new(io, &handle);
+                let mut tm = TimeoutStream::new(io);
                 tm.set_read_timeout(read_timeout);
                 tm.set_write_timeout(write_timeout);
                 Ok(tm)
