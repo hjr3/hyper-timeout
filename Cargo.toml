@@ -1,6 +1,6 @@
 [package]
 name = "hyper-timeout"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["Herman J. Radtke III <herman@hermanradtke.com>"]
 
 [badges]
