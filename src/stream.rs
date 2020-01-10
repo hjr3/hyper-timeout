@@ -9,7 +9,7 @@ use hyper::client::connect::{Connected, Connection};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_io_timeout::TimeoutStream;
 
-/// A stream which applies read and write timeouts to an inner stream.
+/// A timeout stream that implements required traits to be a Connector
 #[derive(Debug)]
 pub struct TimeoutConnectorStream<S>(TimeoutStream<S>);
 
