@@ -13,7 +13,7 @@ edition = "2018"
 travis-ci = { repository = "https://github.com/hjr3/hyper-timeout", branch = "master" }
 
 [dependencies]
-futures-util = "0.3.1"
+bytes = "0.5"
 hyper = "0.13"
 tokio = "0.2"
 tokio-io = "0.1"
