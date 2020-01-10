@@ -139,26 +139,18 @@ mod tests {
 
     use super::TimeoutConnector;
 
-    #[test]
-    fn test_timeout_connector() {
-        let mut rt = tokio::runtime::Builder::new()
-            .basic_scheduler()
-            .enable_all()
-            .build()
-            .unwrap();
+    #[tokio::test]
+    async fn test_timeout_connector() {
+        // 10.255.255.1 is a not a routable IP address
+        let url = "http://10.255.255.1".parse().unwrap();
 
-        let res = rt.block_on(async {
-            // 10.255.255.1 is a not a routable IP address
-            let url = "http://10.255.255.1".parse().unwrap();
+        let http = HttpConnector::new();
+        let mut connector = TimeoutConnector::new(http);
+        connector.set_connect_timeout(Some(Duration::from_millis(1)));
 
-            let http = HttpConnector::new();
-            let mut connector = TimeoutConnector::new(http);
-            connector.set_connect_timeout(Some(Duration::from_millis(1)));
+        let client = Client::builder().build::<_, hyper::Body>(connector);
 
-            let client = Client::builder().build::<_, hyper::Body>(connector);
-
-            client.get(url).await
-        });
+        let res = client.get(url).await;
 
         match res {
             Ok(_) => panic!("Expected a timeout"),
@@ -172,26 +164,18 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_read_timeout() {
-        let mut rt = tokio::runtime::Builder::new()
-            .basic_scheduler()
-            .enable_all()
-            .build()
-            .unwrap();
+    #[tokio::test]
+    async fn test_read_timeout() {
+        let url = "http://example.com".parse().unwrap();
 
-        let res = rt.block_on(async {
-            let url = "http://example.com".parse().unwrap();
+        let http = HttpConnector::new();
+        let mut connector = TimeoutConnector::new(http);
+        // A 1 ms read timeout should be so short that we trigger a timeout error
+        connector.set_read_timeout(Some(Duration::from_millis(1)));
 
-            let http = HttpConnector::new();
-            let mut connector = TimeoutConnector::new(http);
-            // A 1 ms read timeout should be so short that we trigger a timeout error
-            connector.set_read_timeout(Some(Duration::from_millis(1)));
+        let client = Client::builder().build::<_, hyper::Body>(connector);
 
-            let client = Client::builder().build::<_, hyper::Body>(connector);
-
-            client.get(url).await
-        });
+        let res = client.get(url).await;
 
         match res {
             Ok(_) => panic!("Expected a timeout"),
