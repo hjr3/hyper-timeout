@@ -14,11 +14,13 @@ use futures_util::future::FutureExt;
 
 //use tokio::net::TcpStream;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::time::Timeout;
+use tokio::time::timeout;
 use tokio_io_timeout::TimeoutStream;
 
 use hyper::{service::Service, Uri};
 use hyper::client::connect::{Connect, Connected };
+
+type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// A connector that enforces as connection timeout
 #[derive(Debug, Clone)]
@@ -50,10 +52,10 @@ where
     T: Service<Uri>,
     T::Response: AsyncRead + AsyncWrite + Send + Unpin,
     T::Future: Send + 'static,
-    //T::Error: Into<BoxError>,
+    T::Error: Into<BoxError>,
 {
-    type Response = T::Response;
-    type Error = T::Error;
+    type Response = TimeoutStream<T::Response>;
+    type Error = BoxError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -69,19 +71,44 @@ where
         let write_timeout = self.write_timeout.clone();
         let connecting = self.connector.call(dst);
 
-        return Box::pin(connecting);
+        if self.connect_timeout.is_none() {
+            let fut = async move {
+                let io = connecting.await.map_err(Into::into)?;
 
-        //if self.connect_timeout.is_none() {
-        //    return Box::pin(connecting.map(move |io| {
-        //        let mut tm = TimeoutStream::new(io);
-        //        tm.set_read_timeout(read_timeout);
-        //        tm.set_write_timeout(write_timeout);
-        //        tm
-        //    }));
-        //}
+                let mut tm = TimeoutStream::new(io);
+                tm.set_read_timeout(read_timeout);
+                tm.set_write_timeout(write_timeout);
+                Ok(tm)
+            };
 
-        //let connect_timeout = self.connect_timeout.expect("Connect timeout should be set");
-        //let timeout = Timeout::new(connecting, connect_timeout);
+            return Box::pin(fut);
+            //return Box::pin(connecting.then(move |io| match io {
+            //    Ok(io) => {
+            //        //let mut tm = TimeoutStream::new(io);
+            //        //tm.set_read_timeout(read_timeout);
+            //        //tm.set_write_timeout(write_timeout);
+            //        Ok(io)
+            //    }
+            //    Err(e) => Err(e.into()),
+            //}));
+        }
+
+        //return Box::pin(connecting);
+
+        let connect_timeout = self.connect_timeout.expect("Connect timeout should be set");
+        let timeout = timeout(connect_timeout, connecting);
+
+        let fut = async move {
+            let connecting = timeout.await.map_err(|e| io::Error::new(io::ErrorKind::TimedOut, e))?;
+            let io = connecting.map_err(Into::into)?;
+
+            let mut tm = TimeoutStream::new(io);
+            tm.set_read_timeout(read_timeout);
+            tm.set_write_timeout(write_timeout);
+            Ok(tm)
+        };
+
+        Box::pin(fut)
 
         //Box::pin(timeout.then(move |res| match res {
         //    Ok(io) => {
