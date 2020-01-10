@@ -14,11 +14,11 @@ travis-ci = { repository = "https://github.com/hjr3/hyper-timeout", branch = "ma
 
 [dependencies]
 bytes = "0.5"
-hyper = "0.13"
+hyper = { version = "0.13", default-features = false, features = ["tcp"] }
 tokio = "0.2"
 tokio-io = "0.1"
 tokio-io-timeout = "0.4"
 
 [dev-dependencies]
 hyper-tls = "0.4"
-futures = "0.3"
+tokio = { version = "0.2", features = ["io-std", "macros"] }

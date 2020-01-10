@@ -130,8 +130,6 @@ impl<T> Connection for TimeoutConnector<T> {
 
 #[cfg(test)]
 mod tests {
-    extern crate futures;
-
     use std::error::Error;
     use std::io;
     use std::time::Duration;
@@ -174,36 +172,36 @@ mod tests {
         }
     }
 
-    //#[test]
-    //fn test_read_timeout() {
-    //    let mut rt = tokio::runtime::Builder::new()
-    //        .basic_scheduler()
-    //        .enable_all()
-    //        .build()
-    //        .unwrap();
+    #[test]
+    fn test_read_timeout() {
+        let mut rt = tokio::runtime::Builder::new()
+            .basic_scheduler()
+            .enable_all()
+            .build()
+            .unwrap();
 
-    //    let res = rt.block_on(async {
-    //        let url = "http://example.com".parse().unwrap();
+        let res = rt.block_on(async {
+            let url = "http://example.com".parse().unwrap();
 
-    //        let http = HttpConnector::new();
-    //        let mut connector = TimeoutConnector::new(http);
-    //        // A 1 ms read timeout should be so short that we trigger a timeout error
-    //        connector.set_read_timeout(Some(Duration::from_millis(1)));
+            let http = HttpConnector::new();
+            let mut connector = TimeoutConnector::new(http);
+            // A 1 ms read timeout should be so short that we trigger a timeout error
+            connector.set_read_timeout(Some(Duration::from_millis(1)));
 
-    //        let client = Client::builder().build::<_, hyper::Body>(connector);
+            let client = Client::builder().build::<_, hyper::Body>(connector);
 
-    //        client.get(url).await
-    //    });
+            client.get(url).await
+        });
 
-    //    match res {
-    //        Ok(_) => panic!("Expected a timeout"),
-    //        Err(e) => {
-    //            if let Some(io_e) = e.source().unwrap().downcast_ref::<io::Error>() {
-    //                assert_eq!(io_e.kind(), io::ErrorKind::TimedOut);
-    //            } else {
-    //                panic!("Expected timeout error");
-    //            }
-    //        }
-    //    }
-    //}
+        match res {
+            Ok(_) => panic!("Expected a timeout"),
+            Err(e) => {
+                if let Some(io_e) = e.source().unwrap().downcast_ref::<io::Error>() {
+                    assert_eq!(io_e.kind(), io::ErrorKind::TimedOut);
+                } else {
+                    panic!("Expected timeout error");
+                }
+            }
+        }
+    }
 }
