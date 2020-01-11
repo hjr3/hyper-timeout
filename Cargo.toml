@@ -7,18 +7,18 @@ license = "MIT/Apache-2.0"
 documentation = "https://github.com/hjr3/hyper-timeout"
 homepage = "https://github.com/hjr3/hyper-timeout"
 repository = "https://github.com/hjr3/hyper-timeout"
+edition = "2018"
 
 [badges]
 travis-ci = { repository = "https://github.com/hjr3/hyper-timeout", branch = "master" }
 
 [dependencies]
-futures = "0.1"
-hyper = "0.12"
-tokio = "0.1"
+bytes = "0.5"
+hyper = { version = "0.13", default-features = false, features = ["tcp"] }
+tokio = "0.2"
 tokio-io = "0.1"
-tokio-io-timeout = "0.3"
-tokio-reactor = "0.1"
-tokio-service = "0.1"
+tokio-io-timeout = "0.4"
 
 [dev-dependencies]
-hyper-tls = "0.3"
+hyper-tls = "0.4"
+tokio = { version = "0.2", features = ["io-std", "macros"] }

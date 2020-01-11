@@ -19,21 +19,16 @@ There is a `TimeoutConnector` that implements the `hyper::Connect` trait. This c
 
 Hyper version compatibility:
 
-* The `0.1` release supports hyper 0.11.
+* The `master` branch will track on going development for hyper.
+* The `0.3` release supports hyper 0.13.
 * The `0.2` release supports hyper 0.12.
-* The `master` branch will track on going developer for hyper 0.13.
+* The `0.1` release supports hyper 0.11.
 
-First, (assuming you are using hyper 0.12) add this to your `Cargo.toml`:
+First, (assuming you are using hyper 0.13) add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hyper-timeout = "0.2"
-```
-
-Next, add this to your crate:
-
-```rust
-extern crate hyper_timeout;
+hyper-timeout = "0.3"
 ```
 
 See the [client example](./examples/client.rs) for a working example.
