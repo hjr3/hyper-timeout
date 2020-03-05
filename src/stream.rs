@@ -129,6 +129,6 @@ where
     S: AsyncRead + AsyncWrite + Connection + Unpin,
 {
     fn connected(&self) -> Connected {
-        Connected::new()
+        self.0.get_ref().connected()
     }
 }
