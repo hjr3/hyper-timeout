@@ -1,6 +1,6 @@
 [package]
 name = "hyper-timeout"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Herman J. Radtke III <herman@hermanradtke.com>"]
 description = "A connect, read and write timeout aware connector to be used with hyper Client."
 license = "MIT/Apache-2.0"
