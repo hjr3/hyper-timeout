@@ -2,9 +2,10 @@ use std::future::Future;
 use std::io;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use std::time::Duration;
 
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::time::{timeout, Duration};
+use tokio::time::timeout;
 use tokio_io_timeout::TimeoutStream;
 
 use hyper::client::connect::{Connect, Connected, Connection};
