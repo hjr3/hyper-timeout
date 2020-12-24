@@ -10,9 +10,6 @@ homepage = "https://github.com/hjr3/hyper-timeout"
 repository = "https://github.com/hjr3/hyper-timeout"
 readme = "README.md"
 
-[badges]
-travis-ci = { repository = "https://github.com/hjr3/hyper-timeout", branch = "master" }
-
 [dependencies]
 bytes = "1.0.0"
 hyper = { version = "0.14", default-features = false, features = ["client", "http1", "tcp"] }

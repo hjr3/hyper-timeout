@@ -7,8 +7,8 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::time::{timeout, Duration};
 use tokio_io_timeout::TimeoutStream;
 
-use hyper::{service::Service, Uri};
 use hyper::client::connect::{Connect, Connected, Connection};
+use hyper::{service::Service, Uri};
 
 mod stream;
 
@@ -33,7 +33,7 @@ impl<T: Connect> TimeoutConnector<T> {
     /// Construct a new TimeoutConnector with a given connector implementing the `Connect` trait
     pub fn new(connector: T) -> Self {
         TimeoutConnector {
-            connector: connector,
+            connector,
             connect_timeout: None,
             read_timeout: None,
             write_timeout: None,
@@ -50,6 +50,7 @@ where
 {
     type Response = Pin<Box<TimeoutConnectorStream<T::Response>>>;
     type Error = BoxError;
+    #[allow(clippy::type_complexity)]
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -57,8 +58,8 @@ where
     }
 
     fn call(&mut self, dst: Uri) -> Self::Future {
-        let read_timeout = self.read_timeout.clone();
-        let write_timeout = self.write_timeout.clone();
+        let read_timeout = self.read_timeout;
+        let write_timeout = self.write_timeout;
         let connecting = self.connector.call(dst);
 
         if self.connect_timeout.is_none() {
@@ -78,7 +79,9 @@ where
         let timeout = timeout(connect_timeout, connecting);
 
         let fut = async move {
-            let connecting = timeout.await.map_err(|e| io::Error::new(io::ErrorKind::TimedOut, e))?;
+            let connecting = timeout
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::TimedOut, e))?;
             let io = connecting.map_err(Into::into)?;
 
             let mut tm = TimeoutConnectorStream::new(TimeoutStream::new(io));
@@ -132,8 +135,8 @@ mod tests {
     use std::io;
     use std::time::Duration;
 
-    use hyper::Client;
     use hyper::client::HttpConnector;
+    use hyper::Client;
 
     use super::TimeoutConnector;
 

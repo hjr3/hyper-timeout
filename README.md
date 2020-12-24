@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.org/hjr3/hyper-timeout.svg?branch=master)](https://travis-ci.org/hjr3/hyper-timeout)
 [![crates.io](https://img.shields.io/crates/v/hyper-timeout.svg)](https://crates.io/crates/hyper-timeout)
 
 # hyper-timeout
