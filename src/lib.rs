@@ -2,10 +2,9 @@ use std::future::Future;
 use std::io;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::time::Duration;
 
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::time::timeout;
+use tokio::time::{timeout, Duration};
 use tokio_io_timeout::TimeoutStream;
 
 use hyper::{service::Service, Uri};
@@ -44,21 +43,17 @@ impl<T: Connect> TimeoutConnector<T> {
 
 impl<T> Service<Uri> for TimeoutConnector<T>
 where
-    T: Service<Uri>,
-    T::Response: AsyncRead + AsyncWrite + Send + Unpin,
+    T: Service<Uri> + Send,
+    T::Response: AsyncRead + AsyncWrite + Connection + Send + Unpin,
     T::Future: Send + 'static,
     T::Error: Into<BoxError>,
 {
-    type Response = TimeoutConnectorStream<T::Response>;
+    type Response = Pin<Box<TimeoutConnectorStream<T::Response>>>;
     type Error = BoxError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        match self.connector.poll_ready(cx) {
-            Poll::Ready(Ok(())) => Poll::Ready(Ok(())),
-            Poll::Ready(Err(e)) => Poll::Ready(Err(e.into())),
-            Poll::Pending => Poll::Pending,
-        }
+        self.connector.poll_ready(cx).map_err(Into::into)
     }
 
     fn call(&mut self, dst: Uri) -> Self::Future {
@@ -73,7 +68,7 @@ where
                 let mut tm = TimeoutConnectorStream::new(TimeoutStream::new(io));
                 tm.set_read_timeout(read_timeout);
                 tm.set_write_timeout(write_timeout);
-                Ok(tm)
+                Ok(Box::pin(tm))
             };
 
             return Box::pin(fut);
@@ -89,7 +84,7 @@ where
             let mut tm = TimeoutConnectorStream::new(TimeoutStream::new(io));
             tm.set_read_timeout(read_timeout);
             tm.set_write_timeout(write_timeout);
-            Ok(tm)
+            Ok(Box::pin(tm))
         };
 
         Box::pin(fut)
@@ -122,9 +117,12 @@ impl<T> TimeoutConnector<T> {
     }
 }
 
-impl<T> Connection for TimeoutConnector<T> {
+impl<T: Connect> Connection for TimeoutConnector<T>
+where
+    T: AsyncRead + AsyncWrite + Connection + Unpin,
+{
     fn connected(&self) -> Connected {
-        Connected::new()
+        self.connector.connected()
     }
 }
 
