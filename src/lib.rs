@@ -7,8 +7,8 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::time::{timeout, Duration};
 use tokio_io_timeout::TimeoutStream;
 
-use hyper::{service::Service, Uri};
 use hyper::client::connect::{Connect, Connected, Connection};
+use hyper::{service::Service, Uri};
 
 mod stream;
 
@@ -78,7 +78,9 @@ where
         let timeout = timeout(connect_timeout, connecting);
 
         let fut = async move {
-            let connecting = timeout.await.map_err(|e| io::Error::new(io::ErrorKind::TimedOut, e))?;
+            let connecting = timeout
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::TimedOut, e))?;
             let io = connecting.map_err(Into::into)?;
 
             let mut tm = TimeoutConnectorStream::new(TimeoutStream::new(io));
@@ -132,8 +134,8 @@ mod tests {
     use std::io;
     use std::time::Duration;
 
-    use hyper::Client;
     use hyper::client::HttpConnector;
+    use hyper::Client;
 
     use super::TimeoutConnector;
 

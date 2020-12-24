@@ -2,7 +2,7 @@ use std::io;
 use std::io::IoSlice;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::time::{Duration};
+use std::time::Duration;
 
 use hyper::client::connect::{Connected, Connection};
 use pin_project_lite::pin_project;

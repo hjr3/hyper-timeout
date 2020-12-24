@@ -1,7 +1,7 @@
 use std::env;
 use std::time::Duration;
 
-use hyper::{Client, body::HttpBody as _};
+use hyper::{body::HttpBody as _, Client};
 use tokio::io::{self, AsyncWriteExt as _};
 
 use hyper::client::HttpConnector;
@@ -38,9 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while let Some(chunk) = res.body_mut().data().await {
         let chunk = chunk?;
-        io::stdout()
-            .write_all(&chunk)
-            .await?
+        io::stdout().write_all(&chunk).await?
     }
     Ok(())
 }
