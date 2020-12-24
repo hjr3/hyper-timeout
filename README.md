@@ -20,15 +20,16 @@ There is a `TimeoutConnector` that implements the `hyper::Connect` trait. This c
 Hyper version compatibility:
 
 * The `master` branch will track on going development for hyper.
+* The `0.4` release supports hyper 0.14.
 * The `0.3` release supports hyper 0.13.
 * The `0.2` release supports hyper 0.12.
 * The `0.1` release supports hyper 0.11.
 
-First, (assuming you are using hyper 0.13) add this to your `Cargo.toml`:
+Assuming you are using hyper 0.14, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hyper-timeout = "0.3"
+hyper-timeout = "0.4"
 ```
 
 See the [client example](./examples/client.rs) for a working example.
