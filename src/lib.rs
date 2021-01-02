@@ -8,7 +8,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::time::timeout;
 use tokio_io_timeout::TimeoutStream;
 
-use hyper::client::connect::{Connect, Connected, Connection};
+use hyper::client::connect::{Connected, Connection};
 use hyper::{service::Service, Uri};
 
 mod stream;
@@ -30,7 +30,13 @@ pub struct TimeoutConnector<T> {
     write_timeout: Option<Duration>,
 }
 
-impl<T: Connect> TimeoutConnector<T> {
+impl<T> TimeoutConnector<T>
+where
+    T: Service<Uri> + Send,
+    T::Response: AsyncRead + AsyncWrite + Send + Unpin,
+    T::Future: Send + 'static,
+    T::Error: Into<BoxError>,
+{
     /// Construct a new TimeoutConnector with a given connector implementing the `Connect` trait
     pub fn new(connector: T) -> Self {
         TimeoutConnector {
@@ -116,9 +122,12 @@ impl<T> TimeoutConnector<T> {
     }
 }
 
-impl<T: Connect> Connection for TimeoutConnector<T>
+impl<T> Connection for TimeoutConnector<T>
 where
-    T: AsyncRead + AsyncWrite + Connection + Unpin,
+    T: AsyncRead + AsyncWrite + Connection + Service<Uri> + Send + Unpin,
+    T::Response: AsyncRead + AsyncWrite + Send + Unpin,
+    T::Future: Send + 'static,
+    T::Error: Into<BoxError>,
 {
     fn connected(&self) -> Connected {
         self.connector.connected()
