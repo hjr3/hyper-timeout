@@ -18,6 +18,5 @@ tokio-io-timeout = "1.1.0"
 
 [dev-dependencies]
 hyper = { version = "0.14", features = ["client", "http1", "tcp"] }
-#FIXME enable when https://github.com/hyperium/hyper-tls/pull/79 lands
-#hyper-tls = "0.4"
+hyper-tls = "0.5"
 tokio = { version = "1.0.0", features = ["io-std", "io-util", "macros"] }
