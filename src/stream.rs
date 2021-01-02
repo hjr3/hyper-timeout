@@ -36,9 +36,21 @@ where
 
     /// Sets the read timeout.
     ///
-    /// This will reset any pending read timeout.
+    /// This can only be used before the stream is pinned; use
+    /// [`set_read_timeout_pinned`](Self::set_read_timeout_pinned) otherwise.
     pub fn set_read_timeout(&mut self, timeout: Option<Duration>) {
         self.stream.set_read_timeout(timeout)
+    }
+
+    /// Sets the read timeout.
+    ///
+    /// This will reset any pending read timeout. Use
+    /// [`set_read_timeout`](Self::set_read_timeout) instead if the stream has not yet been pinned.
+    pub fn set_read_timeout_pinned(self: Pin<&mut Self>, timeout: Option<Duration>) {
+        self.project()
+            .stream
+            .as_mut()
+            .set_read_timeout_pinned(timeout)
     }
 
     /// Returns the current write timeout.
@@ -48,9 +60,22 @@ where
 
     /// Sets the write timeout.
     ///
-    /// This will reset any pending write timeout.
+    /// This can only be used before the stream is pinned; use
+    /// [`set_write_timeout_pinned`](Self::set_write_timeout_pinned) otherwise.
     pub fn set_write_timeout(&mut self, timeout: Option<Duration>) {
         self.stream.set_write_timeout(timeout)
+    }
+
+    /// Sets the write timeout.
+    ///
+    /// This will reset any pending write timeout. Use
+    /// [`set_write_timeout`](Self::set_write_timeout) instead if the stream has not yet been
+    /// pinned.
+    pub fn set_write_timeout_pinned(self: Pin<&mut Self>, timeout: Option<Duration>) {
+        self.project()
+            .stream
+            .as_mut()
+            .set_write_timeout_pinned(timeout)
     }
 
     /// Returns a shared reference to the inner stream.
@@ -61,6 +86,11 @@ where
     /// Returns a mutable reference to the inner stream.
     pub fn get_mut(&mut self) -> &mut S {
         self.stream.get_mut()
+    }
+
+    /// Returns a pinned mutable reference to the inner stream.
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut S> {
+        self.project().stream.get_pin_mut()
     }
 
     /// Consumes the stream, returning the inner stream.
