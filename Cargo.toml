@@ -1,6 +1,6 @@
 [package]
 name = "hyper-timeout"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Herman J. Radtke III <herman@hermanradtke.com>"]
 edition = "2018"
 description = "A connect, read and write timeout aware connector to be used with hyper Client."
