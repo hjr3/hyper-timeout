@@ -4,20 +4,19 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use tokio::io::{AsyncRead, AsyncWrite};
+use hyper::rt::{Read, Write};
 use tokio::time::timeout;
-use tokio_io_timeout::TimeoutStream;
 
-use hyper::client::connect::{Connected, Connection};
-use hyper::{service::Service, Uri};
+use hyper::Uri;
+use hyper_util::client::legacy::connect::{Connected, Connection};
+use tower_service::Service;
 
 mod stream;
-
-use stream::TimeoutConnectorStream;
+use stream::TimeoutStream;
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
-/// A connector that enforces as connection timeout
+/// A connector that enforces a connection timeout
 #[derive(Debug, Clone)]
 pub struct TimeoutConnector<T> {
     /// A connector implementing the `Connect` trait
@@ -33,7 +32,7 @@ pub struct TimeoutConnector<T> {
 impl<T> TimeoutConnector<T>
 where
     T: Service<Uri> + Send,
-    T::Response: AsyncRead + AsyncWrite + Send + Unpin,
+    T::Response: Read + Write + Send + Unpin,
     T::Future: Send + 'static,
     T::Error: Into<BoxError>,
 {
@@ -51,11 +50,11 @@ where
 impl<T> Service<Uri> for TimeoutConnector<T>
 where
     T: Service<Uri> + Send,
-    T::Response: AsyncRead + AsyncWrite + Connection + Send + Unpin,
+    T::Response: Read + Write + Connection + Send + Unpin,
     T::Future: Send + 'static,
     T::Error: Into<BoxError>,
 {
-    type Response = Pin<Box<TimeoutConnectorStream<T::Response>>>;
+    type Response = Pin<Box<TimeoutStream<T::Response>>>;
     type Error = BoxError;
     #[allow(clippy::type_complexity)]
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
@@ -71,7 +70,7 @@ where
         let connecting = self.connector.call(dst);
 
         let fut = async move {
-            let stream = match connect_timeout {
+            let mut stream = match connect_timeout {
                 None => {
                     let io = connecting.await.map_err(Into::into)?;
                     TimeoutStream::new(io)
@@ -85,11 +84,9 @@ where
                     TimeoutStream::new(io)
                 }
             };
-
-            let mut tm = TimeoutConnectorStream::new(stream);
-            tm.set_read_timeout(read_timeout);
-            tm.set_write_timeout(write_timeout);
-            Ok(Box::pin(tm))
+            stream.set_read_timeout(read_timeout);
+            stream.set_write_timeout(write_timeout);
+            Ok(Box::pin(stream))
         };
 
         Box::pin(fut)
@@ -124,8 +121,8 @@ impl<T> TimeoutConnector<T> {
 
 impl<T> Connection for TimeoutConnector<T>
 where
-    T: AsyncRead + AsyncWrite + Connection + Service<Uri> + Send + Unpin,
-    T::Response: AsyncRead + AsyncWrite + Send + Unpin,
+    T: Read + Write + Connection + Service<Uri> + Send + Unpin,
+    T::Response: Read + Write + Send + Unpin,
     T::Future: Send + 'static,
     T::Error: Into<BoxError>,
 {
@@ -136,12 +133,15 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::error::Error;
-    use std::io;
     use std::time::Duration;
+    use std::{error::Error, io};
 
-    use hyper::client::HttpConnector;
-    use hyper::Client;
+    use http_body_util::Empty;
+    use hyper::body::Bytes;
+    use hyper_util::{
+        client::legacy::{connect::HttpConnector, Client},
+        rt::TokioExecutor,
+    };
 
     use super::TimeoutConnector;
 
@@ -154,7 +154,7 @@ mod tests {
         let mut connector = TimeoutConnector::new(http);
         connector.set_connect_timeout(Some(Duration::from_millis(1)));
 
-        let client = Client::builder().build::<_, hyper::Body>(connector);
+        let client = Client::builder(TokioExecutor::new()).build::<_, Empty<Bytes>>(connector);
 
         let res = client.get(url).await;
 
@@ -179,19 +179,17 @@ mod tests {
         // A 1 ms read timeout should be so short that we trigger a timeout error
         connector.set_read_timeout(Some(Duration::from_millis(1)));
 
-        let client = Client::builder().build::<_, hyper::Body>(connector);
+        let client = Client::builder(TokioExecutor::new()).build::<_, Empty<Bytes>>(connector);
 
         let res = client.get(url).await;
 
-        match res {
-            Ok(_) => panic!("Expected a timeout"),
-            Err(e) => {
-                if let Some(io_e) = e.source().unwrap().downcast_ref::<io::Error>() {
-                    assert_eq!(io_e.kind(), io::ErrorKind::TimedOut);
-                } else {
-                    panic!("Expected timeout error");
+        if let Err(client_e) = res {
+            if let Some(hyper_e) = client_e.source() {
+                if let Some(io_e) = hyper_e.source().unwrap().downcast_ref::<io::Error>() {
+                    return assert_eq!(io_e.kind(), io::ErrorKind::TimedOut);
                 }
             }
         }
+        panic!("Expected timeout error");
     }
 }

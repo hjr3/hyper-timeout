@@ -1,8 +1,10 @@
 use std::env;
 use std::time::Duration;
 
-use hyper::{body::HttpBody as _, Client};
-use tokio::io::{self, AsyncWriteExt as _};
+use http_body_util::{BodyExt, Empty};
+use hyper::body::Bytes;
+use hyper_util::{client::legacy::Client, rt::TokioExecutor};
+use tokio::io::{self, AsyncWriteExt};
 
 use hyper_tls::HttpsConnector;
 
@@ -22,22 +24,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = url.parse::<hyper::Uri>().unwrap();
 
     // This example uses `HttpsConnector`, but you can also use hyper `HttpConnector`
-    //let h = hyper::client::HttpConnector::new();
+    //let h = hyper_util::client::legacy::connect::HttpConnector::new();
     let h = HttpsConnector::new();
     let mut connector = TimeoutConnector::new(h);
     connector.set_connect_timeout(Some(Duration::from_secs(5)));
     connector.set_read_timeout(Some(Duration::from_secs(5)));
     connector.set_write_timeout(Some(Duration::from_secs(5)));
-    let client = Client::builder().build::<_, hyper::Body>(connector);
+    let client = Client::builder(TokioExecutor::new()).build::<_, Empty<Bytes>>(connector);
 
     let mut res = client.get(url).await?;
 
     println!("Status: {}", res.status());
     println!("Headers:\n{:#?}", res.headers());
 
-    while let Some(chunk) = res.body_mut().data().await {
-        let chunk = chunk?;
-        io::stdout().write_all(&chunk).await?
+    while let Some(frame) = res.body_mut().frame().await {
+        let bytes = frame?
+            .into_data()
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Error when consuming frame"))?;
+        io::stdout().write_all(&bytes).await?;
     }
+
     Ok(())
 }
