@@ -65,6 +65,20 @@ impl TimeoutState {
     }
 
     #[inline]
+    fn restart(self: Pin<&mut Self>) {
+        let this = self.project();
+
+        if *this.active {
+            let timeout = match this.timeout {
+                Some(timeout) => *timeout,
+                None => return,
+            };
+
+            this.cur.reset(Instant::now() + timeout);
+        }
+    }
+
+    #[inline]
     fn poll_check(self: Pin<&mut Self>, cx: &mut Context) -> io::Result<()> {
         let mut this = self.project();
 
@@ -93,6 +107,7 @@ pin_project! {
         reader: R,
         #[pin]
         state: TimeoutState,
+        reset_on_write: bool,
     }
 }
 
@@ -107,6 +122,7 @@ where
         TimeoutReader {
             reader,
             state: TimeoutState::new(),
+            reset_on_write: false,
         }
     }
 
@@ -152,6 +168,20 @@ where
     }
 }
 
+impl<R> TimeoutReader<R>
+where
+    R: Read + Write,
+{
+    /// Reset on the reader timeout on write
+    ///
+    /// This will reset the reader timeout when a write is done through the
+    /// the TimeoutReader. This is useful when you don't want to trigger
+    /// a reader timeout while writes are still be accepted.
+    pub fn set_reset_on_write(&mut self, reset: bool) {
+        self.reset_on_write = reset
+    }
+}
+
 impl<R> Read for TimeoutReader<R>
 where
     R: Read,
@@ -180,15 +210,36 @@ where
         cx: &mut Context,
         buf: &[u8],
     ) -> Poll<Result<usize, io::Error>> {
-        self.project().reader.poll_write(cx, buf)
+        let this = self.project();
+        let r = this.reader.poll_write(cx, buf);
+        if *this.reset_on_write {
+            if let Poll::Ready(_) = &r {
+                this.state.restart();
+            }
+        }
+        r
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), io::Error>> {
-        self.project().reader.poll_flush(cx)
+        let this = self.project();
+        let r = this.reader.poll_flush(cx);
+        if *this.reset_on_write {
+            if let Poll::Ready(_) = &r {
+                this.state.restart();
+            }
+        }
+        r
     }
 
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), io::Error>> {
-        self.project().reader.poll_shutdown(cx)
+        let this = self.project();
+        let r = this.reader.poll_shutdown(cx);
+        if *this.reset_on_write {
+            if let Poll::Ready(_) = &r {
+                this.state.restart();
+            }
+        }
+        r
     }
 
     fn poll_write_vectored(
@@ -196,7 +247,14 @@ where
         cx: &mut Context,
         bufs: &[io::IoSlice],
     ) -> Poll<io::Result<usize>> {
-        self.project().reader.poll_write_vectored(cx, bufs)
+        let this = self.project();
+        let r = this.reader.poll_write_vectored(cx, bufs);
+        if *this.reset_on_write {
+            if let Poll::Ready(_) = &r {
+                this.state.restart();
+            }
+        }
+        r
     }
 
     fn is_write_vectored(&self) -> bool {
@@ -406,6 +464,15 @@ where
             .stream
             .get_pin_mut()
             .set_timeout_pinned(timeout)
+    }
+
+    /// Reset on the reader timeout on write
+    ///
+    /// This will reset the reader timeout when a write is done through the
+    /// the TimeoutReader. This is useful when you don't want to trigger
+    /// a reader timeout while writes are still be accepted.
+    pub fn set_reset_reader_on_write(&mut self, reset: bool) {
+        self.stream.set_reset_on_write(reset);
     }
 
     /// Returns a shared reference to the inner stream.
