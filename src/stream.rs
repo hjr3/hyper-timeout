@@ -212,10 +212,8 @@ where
     ) -> Poll<Result<usize, io::Error>> {
         let this = self.project();
         let r = this.reader.poll_write(cx, buf);
-        if *this.reset_on_write {
-            if let Poll::Ready(_) = &r {
-                this.state.restart();
-            }
+        if *this.reset_on_write && r.is_ready() {
+            this.state.restart();
         }
         r
     }
@@ -223,10 +221,8 @@ where
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), io::Error>> {
         let this = self.project();
         let r = this.reader.poll_flush(cx);
-        if *this.reset_on_write {
-            if let Poll::Ready(_) = &r {
-                this.state.restart();
-            }
+        if *this.reset_on_write && r.is_ready() {
+            this.state.restart();
         }
         r
     }
@@ -234,10 +230,8 @@ where
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), io::Error>> {
         let this = self.project();
         let r = this.reader.poll_shutdown(cx);
-        if *this.reset_on_write {
-            if let Poll::Ready(_) = &r {
-                this.state.restart();
-            }
+        if *this.reset_on_write && r.is_ready() {
+            this.state.restart();
         }
         r
     }
@@ -249,10 +243,8 @@ where
     ) -> Poll<io::Result<usize>> {
         let this = self.project();
         let r = this.reader.poll_write_vectored(cx, bufs);
-        if *this.reset_on_write {
-            if let Poll::Ready(_) = &r {
-                this.state.restart();
-            }
+        if *this.reset_on_write && r.is_ready() {
+            this.state.restart();
         }
         r
     }
