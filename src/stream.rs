@@ -566,6 +566,7 @@ pin_project! {
 ///
 /// The returned future will resolve to both the I/O stream and the buffer
 /// as well as the number of bytes read once the read operation is completed.
+#[cfg(test)]
 fn read<'a, R>(reader: &'a mut R, buf: &'a mut [u8]) -> ReadFut<'a, R>
 where
     R: Read + Unpin + ?Sized,
@@ -587,6 +588,7 @@ where
     }
 }
 
+#[cfg(test)]
 trait ReadExt: Read {
     /// Pulls some bytes from this source into the specified buffer,
     /// returning how many bytes were read.
@@ -608,6 +610,7 @@ pin_project! {
 
 /// Tries to write some bytes from the given `buf` to the writer in an
 /// asynchronous manner, returning a future.
+#[cfg(test)]
 fn write<'a, W>(writer: &'a mut W, buf: &'a [u8]) -> WriteFut<'a, W>
 where
     W: Write + Unpin + ?Sized,
@@ -627,6 +630,7 @@ where
     }
 }
 
+#[cfg(test)]
 trait WriteExt: Write {
     /// Writes a buffer into this writer, returning how many bytes were
     /// written.
@@ -638,6 +642,7 @@ trait WriteExt: Write {
     }
 }
 
+#[cfg(test)]
 impl<R> ReadExt for Pin<&mut TimeoutReader<R>>
 where
     R: Read,
@@ -647,6 +652,7 @@ where
     }
 }
 
+#[cfg(test)]
 impl<W> WriteExt for Pin<&mut TimeoutWriter<W>>
 where
     W: Write,
@@ -656,6 +662,7 @@ where
     }
 }
 
+#[cfg(test)]
 impl<S> ReadExt for Pin<&mut TimeoutStream<S>>
 where
     S: Read + Write,
@@ -665,6 +672,7 @@ where
     }
 }
 
+#[cfg(test)]
 impl<S> WriteExt for Pin<&mut TimeoutStream<S>>
 where
     S: Read + Write,
